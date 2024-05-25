@@ -72,37 +72,37 @@ def update_captured_image():
         _, img_bw_threshold = cv2.threshold(img_bw_cv, threshold_value, 255, cv2.THRESH_BINARY)
 
 
-# # Теперь обрабатываем сохраненный скриншот
-# if os.path.exists(img_bw):
-#     img = cv2.imread(img_bw)
-#     text = pytesseract.image_to_string(img)
-#     print("Считанный текст с изображения:")
-#     print(text)
-# else:
-#     print("Файл изображения не найден.")
+# Теперь обрабатываем сохраненный скриншот
+if os.path.exists(img_bw):
+     img = cv2.imread(img_bw)
+     text = pytesseract.image_to_string(img)
+     print("Считанный текст с изображения:")
+     print(text)
+else:
+     print("Файл изображения не найден.")
 
 
 
 
         # Преобразование обратно в PIL Image и отображение
-        img_bw_threshold = Image.fromarray(img_bw_threshold)
-        imgtk_bw_threshold = ImageTk.PhotoImage(image=img_bw_threshold)
-        capture_label_bw_threshold.imgtk = imgtk_bw_threshold
-        capture_label_bw_threshold.configure(image=imgtk_bw_threshold)
+img_bw_threshold = Image.fromarray(img_bw_threshold)
+imgtk_bw_threshold = ImageTk.PhotoImage(image=img_bw_threshold)
+capture_label_bw_threshold.imgtk = imgtk_bw_threshold
+capture_label_bw_threshold.configure(image=imgtk_bw_threshold)
 
 
-#def update_captured_image():
-#    if os.path.exists('captured_frame.jpg'):
-#        img = Image.open('captured_frame.jpg')
-#        # Убираем изменение размера, чтобы отображать изображение в оригинальном размере
-#        imgtk = ImageTk.PhotoImage(image=img)
-#        capture_label.imgtk = imgtk
-#        capture_label.configure(image=imgtk)
-#        # Преобразование в черно-белое и отображение
-#        img_bw = img.convert('L')  # Преобразование в черно-белое
-#        imgtk_bw = ImageTk.PhotoImage(image=img_bw)
-#        capture_label_bw.imgtk = imgtk_bw
-#        capture_label_bw.configure(image=imgtk_bw)
+def update_captured_image():
+    if os.path.exists('captured_frame.jpg'):
+        img = Image.open('captured_frame.jpg')
+        # Убираем изменение размера, чтобы отображать изображение в оригинальном размере
+        imgtk = ImageTk.PhotoImage(image=img)
+        capture_label.imgtk = imgtk
+        capture_label.configure(image=imgtk)
+        # Преобразование в черно-белое и отображение
+        img_bw = img.convert('L')  # Преобразование в черно-белое
+        imgtk_bw = ImageTk.PhotoImage(image=img_bw)
+        capture_label_bw.imgtk = imgtk_bw
+        capture_label_bw.configure(image=imgtk_bw)
 
 
 cap = cv2.VideoCapture(1)
