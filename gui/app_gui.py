@@ -5,7 +5,7 @@ from image_processing.image_processing import ImageProcessor
 from data.excel_utils import ExcelUtils
 from PIL import Image, ImageTk
 import cv2
-13
+
 class MainApplication:
     def __init__(self, root):
         self.root = root
@@ -65,28 +65,40 @@ class MainApplication:
             self.excel_utils.load_excel_data(file_path)
 
     def capture_image(self):
-        ret, frame = cap.read()
+        ret, frame = self.camera.get_frame()
         if ret:
-            global x1, y1, x2, y2
+            # Указываем координаты для обрезки кадра
+            x1, y1, x2, y2 = 100, 100, 400, 400  # Пример координат
             cropped_frame = frame[y1:y2, x1:x2]
             cv2.imwrite('captured_frame.jpg', cropped_frame)
-            update_captured_image()
-        pass
+            self.update_captured_image()
+    
+    def update_captured_image(self):
+        # Обновление виджета с захваченным изображением
+        img = Image.open('captured_frame.jpg')
+        imgtk = ImageTk.PhotoImage(image=img)
+        self.capture_label.imgtk = imgtk  # Удерживаем ссылку на изображение
+        self.capture_label.configure(image=imgtk)
 
     def update_image(self):
         # Получаем текущий кадр из камеры
         frame = self.camera.get_frame()
-        # Конвертируем BGR изображение, полученное с камеры, в формат RGB
-        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # Переводим его в формат, совместимый с Tkinter
-        img = Image.fromarray(cv2image)
-        imgtk = ImageTk.PhotoImage(image=img)
-        self.video_label.imgtk = imgtk  # Удерживаем ссылку на изображение
-        self.video_label.configure(image=imgtk)
+        if frame is not None:
+            # Конвертируем BGR изображение, полученное с камеры, в формат RGB
+            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Переводим его в формат, совместимый с Tkinter
+            img = Image.fromarray(cv2image)
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.video_label.imgtk = imgtk  # Удерживаем ссылку на изображение
+            self.video_label.configure(image=imgtk)
         # Устанавливаем интервал в миллисекундах для следующего обновления
         self.video_label.after(10, self.update_image)        
-        pass
 
     def run(self):
         # Код, который должен выполняться в методе 'run'
         print("Запуск приложения...")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = MainApplication(root)
+    root.mainloop()
