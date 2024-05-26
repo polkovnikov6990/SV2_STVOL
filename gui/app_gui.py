@@ -5,7 +5,7 @@ from image_processing.image_processing import ImageProcessor
 from data.excel_utils import ExcelUtils
 from PIL import Image, ImageTk
 import cv2
-
+13
 class MainApplication:
     def __init__(self, root):
         self.root = root
