@@ -1,24 +1,18 @@
 import tkinter as tk
-from gui.app_gui import MainApplication
+from gui import setup_gui
+from camera import Camera
 
 def main():
-    root = tk.Tk()
-    root.title("Камера")
-
-    # Создаем экземпляр приложения
-    app = MainApplication(root)
-    app.run()
+    # Создание объекта камеры, возможно передав сюда конкретный ID устройства
+    camera = Camera(camera_id=1)
     
-    # Обработчик закрытия окна
-    def on_close():
-        # Здесь вызовите метод release для камеры
-        app.camera.release()
-        root.destroy()
-
-    # При закрытии окна будет вызываться функция on_close
-    root.protocol("WM_DELETE_WINDOW", on_close)
-
+    # Запуск GUI
+    root = tk.Tk()
+    setup_gui(root, camera)
     root.mainloop()
+
+    # Освобождаем камеру после закрытия окна
+    camera.release()
 
 if __name__ == "__main__":
     main()

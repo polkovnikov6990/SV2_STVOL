@@ -1,9 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-from camera.camera import Camera
-from image_processing.image_processing import ImageProcessor
-from data.excel_utils import ExcelUtils
 from PIL import Image, ImageTk
+<<<<<<< HEAD
 import cv2
 13
 class MainApplication:
@@ -25,68 +22,101 @@ class MainApplication:
     
     def create_frames(self):
         self.left_frame = ttk.Frame(self.root, width=800, height=600)
+=======
+import os
+import numpy as np
+from tkinter import messagebox
+
+class Application(tk.Frame):
+    def __init__(self, master, camera):
+        super().__init__(master)
+        self.master = master
+        self.camera = camera
+        self.pack()
+        self.create_widgets()
+        self.setup_gui_callbacks()
+
+    def create_widgets(self):
+        # Создаем виджеты для интерфейса
+        self.left_frame = tk.Frame(self, width=800, height=600)
+>>>>>>> 92f98f2 (restructur)
         self.left_frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
-        self.center_frame = ttk.Frame(self.root, width=800, height=600)
+        self.center_frame = tk.Frame(self, width=800, height=600)
         self.center_frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
-        self.right_frame = ttk.Frame(self.root, width=800, height=600)
+        self.right_frame = tk.Frame(self, width=800, height=600)
         self.right_frame.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
-
-    def setup_widgets(self):
-        # Виджеты для потокового видео и захваченного изображения
-        self.video_label = ttk.Label(self.left_frame)
-        self.video_label.pack(expand=True, padx=10, pady=10)
-        self.capture_label = ttk.Label(self.center_frame)
-        self.capture_label.pack(expand=True, padx=10, pady=10)
-
-        # Кнопка для загрузки файла Excel
-        self.load_button = ttk.Button(self.right_frame, text="Добавить базу данных", command=self.select_excel_file)
-        self.load_button.pack(pady=10)
         
-        # Кнопка для захвата изображения
-        self.capture_button = ttk.Button(self.right_frame, text="Захватить изображение", command=self.capture_image)
-        self.capture_button.pack(pady=10)
+        # Виджеты для отображения видео и захваченного изображения
+        self.video_label = tk.Label(self.left_frame)
+        self.video_label.pack(expand=True)
+        self.capture_label = tk.Label(self.center_frame)
+        self.capture_label.pack(expand=True)
+        self.capture_label_bw_threshold = tk.Label(self.center_frame)
+        self.capture_label_bw_threshold.pack(expand=True)
+        
+        # Виджеты управления для захвата и параметров обработки изображений
+        self.capture_button = tk.Button(self.right_frame, text="Захватить изображение", command=self.capture_image)
+        self.capture_button.pack()
 
-        # Виджет для отображения результатов и настроек
-        self.create_additional_widgets()
+        # Бегунки для настройки параметров захвата и обработки изображения
+        # (Предполагаемые начальные значения координат и порога необходимо загрузить откуда-то)
+        self.scale_x1 = self.create_scale(self.right_frame, "X1", self.update_x1)
+        self.scale_y1 = self.create_scale(self.right_frame, "Y1", self.update_y1)
+        self.scale_x2 = self.create_scale(self.right_frame, "X2", self.update_x2)
+        self.scale_y2 = self.create_scale(self.right_frame, "Y2", self.update_y2)
+        self.threshold_scale = self.create_scale(self.right_frame, "Threshold", self.update_threshold, from_=0, to=255)
 
-        # Запускаем обновление изображения
-        self.update_image()
+    def create_scale(self, frame, label, command, from_=0, to=1280):
+        scale = tk.Scale(frame, from_=from_, to=to, orient=tk.HORIZONTAL, label=label, command=command)
+        scale.pack()
+        return scale
 
-    def create_additional_widgets(self):
-        # Здесь создаются слайдеры для настройки параметров, а также виджеты для вывода результатов
+    def setup_gui_callbacks(self):
+        # Здесь вы можете установить дополнительные обратные вызовы и автоматически обновлять/захватывать изображения
         pass
 
-    def select_excel_file(self):
-        # Используем filedialog для выбора файла Excel
-        file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx *.xls")])
-        if file_path:
-            print(f"Выбран файл: {file_path}")
-            # Загрузка и обработка Excel файла
-            self.excel_utils.load_excel_data(file_path)
+    # Следующие функции могут быть вызваны при изменении пользователем параметров через GUI
+    def update_x1(self, val):
+        # Здесь должен быть код для обновления переменной x1 и вызова дополнительных функций при необходимости
+        pass
+
+    def update_y1(self, val):
+        # Здесь должен быть код для обновления переменной y1 и вызова дополнительных функций при необходимости
+        pass
+
+    def update_x2(self, val):
+        # Здесь должен быть код для обновления переменной x2 и вызова дополнительных функций при необходимости
+        pass
+
+    def update_y2(self, val):
+        # Здесь должен быть код для обновления переменной y2 и вызова дополнительных функций при необходимости
+        pass
+
+    def update_threshold(self, val):
+        # Здесь должен быть код для обновления порога обработки изображения и вызова дополнительных функций для обновления GUI при необходимости
+        pass
 
     def capture_image(self):
-        ret, frame = cap.read()
-        if ret:
-            global x1, y1, x2, y2
-            cropped_frame = frame[y1:y2, x1:x2]
-            cv2.imwrite('captured_frame.jpg', cropped_frame)
-            update_captured_image()
+        # Здесь должен быть код для захвата изображения с камеры
         pass
 
-    def update_image(self):
-        # Получаем текущий кадр из камеры
-        frame = self.camera.get_frame()
-        # Конвертируем BGR изображение, полученное с камеры, в формат RGB
-        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        # Переводим его в формат, совместимый с Tkinter
-        img = Image.fromarray(cv2image)
-        imgtk = ImageTk.PhotoImage(image=img)
-        self.video_label.imgtk = imgtk  # Удерживаем ссылку на изображение
-        self.video_label.configure(image=imgtk)
-        # Устанавливаем интервал в миллисекундах для следующего обновления
-        self.video_label.after(10, self.update_image)        
+    def update_captured_image(self):
+        # Здесь должен быть код для обновления захваченного изображения в GUI
         pass
 
+<<<<<<< HEAD
     def run(self):
         # Код, который должен выполняться в методе 'run'
         print("Запуск приложения...")
+=======
+    def setup_gui(root, camera):
+    app = Application(master=root, camera=camera)
+    app.mainloop()
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("GUI for Image Processing")
+    app = Application(master=root)
+    setup_gui(root)
+    app.mainloop()
+>>>>>>> 92f98f2 (restructur)

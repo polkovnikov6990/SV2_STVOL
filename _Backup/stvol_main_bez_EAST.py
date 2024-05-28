@@ -78,10 +78,11 @@ def update_y2(val):
 def capture_image():
     ret, frame = cap.read()
     if ret:
-        global x1, y1, x2, y2
+        global x1, y1, x2, y2, capture_image_bw
         cropped_frame = frame[y1:y2, x1:x2]
-        cv2.imwrite('captured_frame.jpg', cropped_frame)
-        update_captured_image()
+        capture_image_bw = cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2GRAY)  # Сохраняем черно-белое изображение
+        update_captured_image()  # вызов функции обновления изображения сразу после захвата кадра
+
 
 def update_captured_image():
     def process_image():
@@ -119,7 +120,7 @@ def select_excel_file():
     if excel_file_path:
         print(f"Выбран файл: {excel_file_path}")
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Не удалось подключиться к камере")
     exit()
