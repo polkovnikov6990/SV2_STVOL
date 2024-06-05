@@ -8,8 +8,8 @@ from openpyxl import load_workbook
 import pandas as pd
 from config import excel_data, excel_path, green_fill, yellow_fill
 
-# Установите переменную окружения TESSDATA_PREFIX
-os.environ['TESSDATA_PREFIX'] = '/path/to/tessdata/directory'
+# Убедитесь, что переменная окружения установлена
+os.environ['TESSDATA_PREFIX'] = '/usr/local/share/tessdata/'
 
 def extract_digits(text):
     digits = re.sub(r'\D', '', text)
