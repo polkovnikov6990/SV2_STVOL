@@ -30,11 +30,11 @@ class OCRApp:
         self.load_button.pack()
 
         self.video_label = tk.Label(self.left_frame)
-        self.video_label.pack(expand=True)
+        self.video_label.pack(expand=True, fill=tk.BOTH)
         self.capture_label = tk.Label(self.center_frame)
-        self.capture_label.pack(expand=True)
+        self.capture_label.pack(expand=True, fill=tk.BOTH)
         self.capture_label_bw_threshold = tk.Label(self.center_frame)
-        self.capture_label_bw_threshold.pack(expand=True)
+        self.capture_label_bw_threshold.pack(expand=True, fill=tk.BOTH)
 
         self.capture_button = tk.Button(self.right_frame, text="Захватить изображение", command=self.capture_image)
         self.capture_button.pack()
@@ -57,6 +57,8 @@ class OCRApp:
             self.video_label.imgtk = imgtk
             self.video_label.configure(image=imgtk)
             self.video_label.after(10, self.update_image)
+        else:
+            print("Ошибка: не удалось получить кадр с камеры")
 
     def update_threshold(self, val):
         self.threshold_value = int(val)

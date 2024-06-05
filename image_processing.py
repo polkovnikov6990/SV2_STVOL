@@ -3,10 +3,6 @@ from PIL import Image
 import numpy as np
 
 
-def set_sharpness(cap, sharpness_value):
-    if not cap.set(cv2.CAP_PROP_SHARPNESS, sharpness_value):
-        print("Не удалось установить резкость камеры")
-
 def capture_image(cap, x1, y1, x2, y2):
     ret, frame = cap.read()
     if ret:
