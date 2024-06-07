@@ -1,29 +1,34 @@
 import cv2
-import tkinter as tk
-import image_processing
-import config
-import gui
+import pytesseract
+import pandas as pd
 
-def main():
-    # Инициализация видеопотока с камеры
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Не удалось подключиться к камере")
-        return
+def process_image(image):
+    """
+    Обрабатывает изображение, конвертируя его в оттенки серого и выполняя бинаризацию.
+    
+    :param image: Входное изображение в формате BGR.
+    :return: Обработанное бинарное изображение.
+    """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, thresh = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
+    return thresh
 
-    # Создание основного окна приложения
-    window = tk.Tk()
-    window.title("OCR Application")
+def perform_ocr(image):
+    """
+    Выполняет OCR (распознавание текста) на входном изображении.
+    
+    :param image: Входное бинарное изображение.
+    :return: Распознанный текст.
+    """
+    text = pytesseract.image_to_string(image, lang='eng')
+    return text
 
-    # Создание экземпляра приложения OCRApp
-    app = gui.OCRApp(window, cap)
-
-    # Запуск основного цикла обработки событий
-    window.mainloop()
-
-    # Освобождение ресурсов камеры при закрытии окна
-    cap.release()
-    cv2.destroyAllWindows()
-
-if __name__ == "__main__":
-    main()
+def load_excel_data(filepath='data.xlsx'):
+    """
+    Загружает данные из Excel файла.
+    
+    :param filepath: Путь к Excel файлу.
+    :return: Строковое представление данных из Excel.
+    """
+    df = pd.read_excel(filepath)
+    return df.to_string()

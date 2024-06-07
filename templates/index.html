@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital_INVENT</title>
+    <!-- Подключение Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .video-container {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            overflow-x: auto; /* Горизонтальный скроллбар появится при необходимости */
+            overflow-y: hidden; /* Вертикальное содержимое будет обрезано и не будет прокручиваться */
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        .slider-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .slider-container .slider {
+            width: 45%; /* Уменьшено в два раза */
+            margin: 10px;
+        }
+        .slider-container label {
+            display: block;
+            text-align: center;
+        }
+        .col-3, .col-6 {
+        border: 2px solid red; /* Добавляем красную границу толщиной 2px */
+    }
+    #dataDisplay {
+        max-height: 450px; /* Максимальная высота элемента */
+        overflow-y: auto; /* Добавляет вертикальный скроллбар, если содержимое превышает максимальную высоту */
+    }
+
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1>Digital_INVENT_2.0</h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-3">
+                <form action="/upload" method="post" enctype="multipart/form-data">
+                    <input type="file" name="excelFile">
+                    <input type="submit" value="Upload">
+                </form>
+                <div id="dataDisplay"></div>
+
+                    <script>
+                    document.querySelector('form').addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const formData = new FormData(this);
+                        fetch('/upload', {
+                            method: 'POST',
+                            body: formData,
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            const displayDiv = document.getElementById('dataDisplay');
+                            // Преобразование данных в HTML и отображение их на странице
+                            let htmlContent = '<ul>';
+                            data.forEach(row => {
+                                htmlContent += '<li>' + JSON.stringify(row) + '</li>';
+                            });
+                            htmlContent += '</ul>';
+                            displayDiv.innerHTML = htmlContent;
+                        })
+                        .catch(error => console.error('Error:', error));
+                    });
+                    </script>
+
+            </div>
+            <div class="col-6 text-center">
+                <div class="video-container">
+                    <iframe src="{{ url_for('video_feed') }}" frameborder="0"></iframe>
+                </div>
+                <div class="slider-container">
+                    <div class="slider">
+                        <div class="label-container"><span>Верхняя левая точка</span></div>
+                        <label for="x1">X1:<span id="x1_val">{{ x1 }}</span></label>
+                        <input type="range" class="form-control" id="x1" name="x1" min="0" max="688" value="{{ x1 }}">
+                        <label for="y1">Y1: <span id="y1_val">{{ y1 }}</span></label>
+                        <input type="range" class="form-control" id="y1" name="y1" min="0" max="400" value="{{ y1 }}">
+                    </div>
+                    <div class="slider">
+                        <div class="label-container"><span>Нижняя правая точка</span></div>
+                        <label for="x2">X2: <span id="x2_val">{{ x2 }}</span></label>
+                        <input type="range" class="form-control" id="x2" name="x2" min="0" max="688" value="{{ x2 }}">
+                        <label for="y2">Y2: <span id="y2_val">{{ y2 }}</span></label>
+                        <input type="range" class="form-control" id="y2" name="y2" min="0" max="400" value="{{ y2 }}">
+                    </div>
+                    <button id="captureImageButton" class="btn btn-primary mt-2">Захватить изображение</button>
+
+                </div>
+                </div>
+            </div>
+            <div class="col-3">
+                <!-- Кнопка захвата изображения и другие элементы -->
+                <div id="imageContainer"></div> 
+                <div id="processedFrameContainer"></div>
+<!-- Контейнер для отображения изображения -->
+            </div>
+        </div>
+    </div>
+    <!-- Подключение Bootstrap JS и зависимостей -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            function updateCoords() {
+                const x1 = $('#x1').val();
+                const y1 = $('#y1').val();
+                const x2 = $('#x2').val();
+                const y2 = $('#y2').val();
+
+                $('#x1_val').text(x1);
+                $('#y1_val').text(y1);
+                $('#x2_val').text(x2);
+                $('#y2_val').text(y2);
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/update_coords',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ x1: x1, y1: y1, x2: x2, y2: y2 }),
+                    success: function() {
+                        console.log('Coordinates updated');
+                    }
+                });
+            }
+
+            $('#x1, #y1, #x2, #y2').on('input', updateCoords);
+
+            $('#captureButton').on('click', function() {
+                $.ajax({
+                    type: 'POST',
+                    url: '/capture_image',
+                    success: function(response) {
+                        $('#recognizedText').text('Recognized Text: ' + response.text);
+                    },
+                    error: function() {
+                        $('#recognizedText').text('Failed to capture image');
+                    }
+                });
+            });
+        });
+    </script>
+
+<!-- Скрипт для отображения полученных значений в третей трети экрана -->
+
+<script>
+    function displayProcessedFrame(imageData) {
+        const image = new Image();
+        image.src = imageData;
+        image.onload = function() {
+            // Отобразить изображение на странице
+            const container = document.getElementById('processedFrameContainer');
+            container.innerHTML = ''; // Очистка предыдущего изображения, если оно есть
+            container.appendChild(image);
+        };
+    }
+</script>
+
+<!-- Подключение внешнего JavaScript файла -->
+<script src="{{ url_for('static', filename='capture.js') }}"></script>
+
+</body>
+</body>
+</html>
