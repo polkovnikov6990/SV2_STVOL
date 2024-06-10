@@ -38,20 +38,34 @@
             text-align: center;
         }
         .col-3, .col-6 {
-        border: 2px solid red; /* Добавляем красную границу толщиной 2px */
-    }
-    #dataDisplay {
-        max-height: 450px; /* Максимальная высота элемента */
-        overflow-y: auto; /* Добавляет вертикальный скроллбар, если содержимое превышает максимальную высоту */
-    }
-
+            border: 2px solid red; /* Добавляем красную границу толщиной 2px */
+        }
+        #dataDisplay {
+            max-height: 450px; /* Максимальная высота элемента */
+            overflow-y: auto; /* Добавляет вертикальный скроллбар, если содержимое превышает максимальную высоту */
+        }
+        #capturedImage {
+            max-width: 100%; /* Ограничиваем ширину изображения */
+            height: auto; /* Автоматически подстраиваем высоту */
+        }
+        .square {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 250px; /* Ширина квадрата */
+            height: 215px; /* Высота квадрата */
+            border: 1px solid black; /* Граница квадрата */
+            margin: 5px; /* Отступ между квадратами */
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
             <div class="col-12 text-center">
-                <h1>Digital_INVENT_2.0</h1>
+                <h3>Цифровизация инвентаризации</h3>
             </div>
         </div>
         <div class="row">
@@ -61,8 +75,7 @@
                     <input type="submit" value="Upload">
                 </form>
                 <div id="dataDisplay"></div>
-
-                    <script>
+                <script>
                     document.querySelector('form').addEventListener('submit', function(e) {
                         e.preventDefault();
                         const formData = new FormData(this);
@@ -83,8 +96,7 @@
                         })
                         .catch(error => console.error('Error:', error));
                     });
-                    </script>
-
+                </script>
             </div>
             <div class="col-6 text-center">
                 <div class="video-container">
@@ -106,15 +118,26 @@
                         <input type="range" class="form-control" id="y2" name="y2" min="0" max="400" value="{{ y2 }}">
                     </div>
                     <button id="captureImageButton" class="btn btn-primary mt-2">Захватить изображение</button>
-
-                </div>
                 </div>
             </div>
-            <div class="col-3">
-                <!-- Кнопка захвата изображения и другие элементы -->
-                <div id="imageContainer"></div> 
-                <div id="processedFrameContainer"></div>
-<!-- Контейнер для отображения изображения -->
+            <div class="col-2 text-center">
+                <div id="imageContainer">
+                    <div class="square">
+                        <h6>Черно-белое изображение</h6>
+                        <img id="capturedImage" src="" alt="Captured Image" style="display: none;">
+                    </div>
+                    <div class="square">
+                        <h6>Пороговое изоображениe</h6>
+                        <img id="threshImage" src="" alt="Thresholded Image" style="display: none;">
+                    </div>
+                    <div class="square">
+                        <h6>Распознанный номер образца оружия</h6>
+                        <div id="recognizedText"></div>
+                    </div>
+                </div>
+                            </div>
+
+            </div>
             </div>
         </div>
     </div>
@@ -123,64 +146,57 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        $(document).ready(function() {
-            function updateCoords() {
-                const x1 = $('#x1').val();
-                const y1 = $('#y1').val();
-                const x2 = $('#x2').val();
-                const y2 = $('#y2').val();
+   $(document).ready(function() {
+    function updateCoords() {
+        const x1 = $('#x1').val();
+        const y1 = $('#y1').val();
+        const x2 = $('#x2').val();
+        const y2 = $('#y2').val();
 
-                $('#x1_val').text(x1);
-                $('#y1_val').text(y1);
-                $('#x2_val').text(x2);
-                $('#y2_val').text(y2);
+        $.ajax({
+            type: 'POST',
+            url: '/update_coords',
+            contentType: 'application/json',
+            data: JSON.stringify({ x1: x1, y1: y1, x2: x2, y2: y2 }),
+            success: function() {
+                console.log('Coordinates updated');
+            }
+        });
+    }
 
-                $.ajax({
-                    type: 'POST',
-                    url: '/update_coords',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ x1: x1, y1: y1, x2: x2, y2: y2 }),
-                    success: function() {
-                        console.log('Coordinates updated');
-                    }
-                });
+    $('#x1, #y1, #x2, #y2').on('input', updateCoords);
+
+    $('#captureImageButton').on('click', function() {
+        $.ajax({
+            type: 'POST',
+            url: '/capture_image',
+            success: function(response) {
+                if (response.imageData) {
+                    $('#capturedImage').attr('src', response.imageData).show();
+                } else {
+                    alert('Failed to capture image: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Failed to capture image');
+            }
+        });
+    });
+});
+
+            function displayProcessedFrame(imageData) {
+                const image = new Image();
+                image.src = imageData;
+                image.onload = function() {
+                    // Отобразить изображение на странице
+                    const container = document.getElementById('processedFrameContainer');
+                    container.innerHTML = ''; // Очистка предыдущего изображения, если оно есть
+                    container.appendChild(image);
+                };
             }
 
-            $('#x1, #y1, #x2, #y2').on('input', updateCoords);
-
-            $('#captureButton').on('click', function() {
-                $.ajax({
-                    type: 'POST',
-                    url: '/capture_image',
-                    success: function(response) {
-                        $('#recognizedText').text('Recognized Text: ' + response.text);
-                    },
-                    error: function() {
-                        $('#recognizedText').text('Failed to capture image');
-                    }
-                });
-            });
-        });
     </script>
+    <script src="{{ url_for('static', filename='capture.js') }}"></script>
 
-<!-- Скрипт для отображения полученных значений в третей трети экрана -->
-
-<script>
-    function displayProcessedFrame(imageData) {
-        const image = new Image();
-        image.src = imageData;
-        image.onload = function() {
-            // Отобразить изображение на странице
-            const container = document.getElementById('processedFrameContainer');
-            container.innerHTML = ''; // Очистка предыдущего изображения, если оно есть
-            container.appendChild(image);
-        };
-    }
-</script>
-
-<!-- Подключение внешнего JavaScript файла -->
-<script src="{{ url_for('static', filename='capture.js') }}"></script>
-
-</body>
 </body>
 </html>
