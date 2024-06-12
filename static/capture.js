@@ -1,69 +1,95 @@
-// Предполагаемая функция захвата кадра из видеопотока и преобразование его в Base64
-function captureFrameToBase64(videoElement) {
-    const canvas = document.createElement('canvas');
-    canvas.width = videoElement.videoWidth;
-    canvas.height = videoElement.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg');
-}
+$(document).ready(function() {
+    function updateCoords() {
+        const x1 = $('#x1').val();
+        const y1 = $('#y1').val();
+        const x2 = $('#x2').val();
+        const y2 = $('#y2').val();
 
-// Асинхронная функция для отправки захваченного изображения на сервер и получения обработанного изображения
-async function sendFrameAndProcess(imageData) {
-    try {
-        const response = await fetch('/process_frame', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ image: imageData })
+        // Обновляем значения в интерфейсе
+        $('#x1_val').text(x1);
+        $('#y1_val').text(y1);
+        $('#x2_val').text(x2);
+        $('#y2_val').text(y2);
+
+        // Отправляем данные на сервер
+        $.ajax({
+            type: 'POST',
+            url: '/update_coords',
+            contentType: 'application/json',
+            data: JSON.stringify({ x1: x1, y1: y1, x2: x2, y2: y2 }),
+            success: function() {
+                console.log('Coordinates updated');
+            }
         });
-
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-
-        const data = await response.json();
-        return data.image; // Возвращаем обработанное изображение
-    } catch (error) {
-        console.error('Error:', error);
     }
-}
 
-// Функция для отображения обработанного изображения на странице
-function displayProcessedFrame(imageData) {
-    const image = new Image();
-    image.src = imageData;
-    image.onload = function() {
-        const container = document.getElementById('processedFrameContainer'); // Убедитесь, что у вас есть этот контейнер в HTML
-        container.innerHTML = ''; // Очистка предыдущего изображения, если оно есть
-        container.appendChild(image);
-    };
-}
-
-// Главная функция, объединяющая все шаги
-async function captureAndProcessFrame() {
-    const videoElement = document.querySelector('video');
-    const imageData = captureFrameToBase64(videoElement);
-
-    try {
-        const response = await fetch('/save_image', { // Предполагаемый маршрут на сервере
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
+    function updateThreshold() {
+        const threshold = $('#threshold').val();
+        $('#threshold_val').text(threshold);
+    
+        // Обновляем пороговое изображение на сервере
+        $.ajax({
+            type: 'POST',
+            url: '/update_threshold',
+            contentType: 'application/json',
+            data: JSON.stringify({ threshold: threshold }),
+            success: function(response) {
+                if (response.imageData) {
+                    $('#threshImage').attr('src', response.imageData).show();
+                    recognizeText();  // Вызов функции распознавания текста
+                } else {
+                    console.error(response.message);
+                    alert('Failed to update threshold image: ' + response.message);
+                }
             },
-            body: JSON.stringify({ image: imageData })
+            error: function() {
+                alert('Failed to update threshold image');
+            }
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        } else {
-            console.log('Изображение успешно отправлено на сервер');
-        }
-    } catch (error) {
-        console.error('Ошибка при отправке изображения:', error);
     }
-}
 
-// Обработчик нажатия на кнопку "Захватить изображение"
-document.getElementById('captureImageButton').addEventListener('click', captureAndProcessFrame);
+    // Обновление координат при изменении слайдеров
+    $('#x1, #y1, #x2, #y2').on('input', updateCoords);
+
+    // Обновление порогового значения при изменении слайдера
+    $('#threshold').on('input', updateThreshold);
+
+    // Обработчик нажатия кнопки захвата изображения
+    $('#captureImageButton').on('click', function() {
+        $.ajax({
+            type: 'POST',
+            url: '/capture_image',
+            success: function(response) {
+                if (response.imageData && response.grayImageData) {
+                    // Обновление src атрибутов изображений
+                    $('#capturedImage').attr('src', response.grayImageData).show();
+                    $('#threshImage').attr('src', response.imageData).show();
+                } else {
+                    console.error(response.message);
+                    alert('Failed to capture image: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Failed to capture image');
+            }
+        });
+    });
+});
+
+//function recognizeText() {  Добавляем функцию распознавания текста 
+    // Отправляем запрос на сервер для распознавания текста
+    //$.ajax({
+    //    type: 'POST',
+    //    url: '/recognize_text',
+    //    success: function(response) {
+    //        if (response.recognizedText) {
+    //            $('#recognizedText').text(response.recognizedText);
+    //        } else {
+    //            console.error(response.message);
+    //            alert('Failed to recognize text: ' + response.message);
+    //        }
+    //    },
+    //    error: function() {
+    //        alert('Failed to recognize text');
+    //    }
+    //});

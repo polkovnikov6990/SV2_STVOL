@@ -6,66 +6,14 @@
     <title>Цифровизация инвентаризации</title>
     <!-- Подключение Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .video-container {
-            position: relative;
-            width: 100%;
-            height: 0;
-            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
-            overflow-x: auto; /* Горизонтальный скроллбар появится при необходимости */
-            overflow-y: hidden; /* Вертикальное содержимое будет обрезано и не будет прокручиваться */
-        }
-        .video-container iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            border: 0;
-        }
-        .slider-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .slider-container .slider {
-            width: 45%; /* Уменьшено в два раза */
-            margin: 10px;
-        }
-        .slider-container label {
-            display: block;
-            text-align: center;
-        }
-        .col-3, .col-6 {
-            border: 2px solid red; /* Добавляем красную границу толщиной 2px */
-        }
-        #dataDisplay {
-            max-height: 450px; /* Максимальная высота элемента */
-            overflow-y: auto; /* Добавляет вертикальный скроллбар, если содержимое превышает максимальную высоту */
-        }
-        #capturedImage {
-            max-width: 100%; /* Ограничиваем ширину изображения */
-            height: auto; /* Автоматически подстраиваем высоту */
-        }
-        .square {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: 250px; /* Ширина квадрата */
-            height: 215px; /* Высота квадрата */
-            border: 1px solid black; /* Граница квадрата */
-            margin: 5px; /* Отступ между квадратами */
-            box-sizing: border-box;
-        }
-    </style>
+    <!-- Подключение вашего внешнего CSS файла -->
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
             <div class="col-12 text-center">
-                <h3>Цифровизация инвентаризации</h3>
+                <h5>Цифровизация инвентаризации</h5>
             </div>
         </div>
         <div class="row">
@@ -99,7 +47,7 @@
                 </script>
             </div>
             <div class="col-6 text-center">
-                <div class="video-container">
+                <div class="video-frame">
                     <iframe src="{{ url_for('video_feed') }}" frameborder="0"></iframe>
                 </div>
                 <div class="slider-container">
@@ -122,22 +70,23 @@
             </div>
             <div class="col-2 text-center">
                 <div id="imageContainer">
+                    <h6>Черно-белое изображение</h6>
                     <div class="square">
-                        <h6>Черно-белое изображение</h6>
                         <img id="capturedImage" src="" alt="Captured Image" style="display: none;">
                     </div>
+                    <h6>Пороговое изображение</h6>
                     <div class="square">
-                        <h6>Пороговое изоображениe</h6>
                         <img id="threshImage" src="" alt="Thresholded Image" style="display: none;">
                     </div>
+                    <div class="slider">
+                        <label for="threshold">Пороговое значение: <span id="threshold_val">128</span></label>
+                        <input type="range" class="form-control" id="threshold" name="threshold" min="0" max="255" value="128">
+                    </div>
+                    <h6>Распознанный номер образца оружия</h6>
                     <div class="square">
-                        <h6>Распознанный номер образца оружия</h6>
                         <div id="recognizedText"></div>
                     </div>
                 </div>
-                            </div>
-
-            </div>
             </div>
         </div>
     </div>
@@ -145,59 +94,7 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script>
-   $(document).ready(function() {
-    function updateCoords() {
-        const x1 = $('#x1').val();
-        const y1 = $('#y1').val();
-        const x2 = $('#x2').val();
-        const y2 = $('#y2').val();
-
-        $.ajax({
-            type: 'POST',
-            url: '/update_coords',
-            contentType: 'application/json',
-            data: JSON.stringify({ x1: x1, y1: y1, x2: x2, y2: y2 }),
-            success: function() {
-                console.log('Coordinates updated');
-            }
-        });
-    }
-
-    $('#x1, #y1, #x2, #y2').on('input', updateCoords);
-
-    $('#captureImageButton').on('click', function() {
-        $.ajax({
-            type: 'POST',
-            url: '/capture_image',
-            success: function(response) {
-                if (response.imageData) {
-                    $('#capturedImage').attr('src', response.imageData).show();
-                } else {
-                    console.error(response.message);
-                    alert('Failed to capture image: ' + response.message);
-                }
-            },
-            error: function() {
-                alert('Failed to capture image');
-            }
-        });
-    });
-});
-
-            function displayProcessedFrame(imageData) {
-                const image = new Image();
-                image.src = imageData;
-                image.onload = function() {
-                    // Отобразить изображение на странице
-                    const container = document.getElementById('processedFrameContainer');
-                    container.innerHTML = ''; // Очистка предыдущего изображения, если оно есть
-                    container.appendChild(image);
-                };
-            }
-
-    </script>
+    <!-- Подключение вашего внешнего JS файла -->
     <script src="{{ url_for('static', filename='capture.js') }}"></script>
-
 </body>
 </html>

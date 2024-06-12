@@ -9,26 +9,31 @@ from image_processing import capture_image as process_capture_image, apply_thres
 
 app = Flask(__name__)
 
-# Начальные координаты для зеленого квадрата
-x1, y1, x2, y2 = 100, 100, 200, 200
+# Начальные координаты для зеленого квадрата и пороговое значение
+x1, y1, x2, y2 = 100, 100, 400, 350
+threshold_value = 128
+last_gray_image = None
 
 camera = cv2.VideoCapture(1)  # Захват видео с камеры
 reader = easyocr.Reader(['ru'])
 
-
 def gen_frames():
     global x1, y1, x2, y2
     while True:
-        success, frame = camera.read()  # Чтение кадра
-        if not success:
-            break
-        else:
-            # Рисование зеленого квадрата
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        try:
+            success, frame = camera.read()  # Чтение кадра
+            if not success:
+                break
+            else:
+                # Рисование зеленого квадрата
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                ret, buffer = cv2.imencode('.jpg', frame)
+                frame = buffer.tobytes()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        except Exception as e:
+            print(f"Error in gen_frames: {e}")
+            continue
 
 @app.route('/')
 def index():
@@ -52,18 +57,43 @@ def update_coords():
     y2 = int(data['y2'])
     return jsonify({'message': 'Coordinates updated successfully'})
 
+@app.route('/update_threshold', methods=['POST'])
+def update_threshold():
+    global threshold_value, last_gray_image
+    try:
+        data = request.json
+        threshold_value = int(data['threshold'])
+
+        if last_gray_image is not None:
+            _, threshold_image = cv2.threshold(last_gray_image, threshold_value, 255, cv2.THRESH_BINARY)
+
+            # Кодирование порогового изображения в base64
+            _, buffer_thresh = cv2.imencode('.jpg', threshold_image)
+            encoded_thresh_image = base64.b64encode(buffer_thresh).decode('utf-8')
+            thresh_image_data = f'data:image/jpeg;base64,{encoded_thresh_image}'
+
+            return jsonify({'imageData': thresh_image_data})
+        else:
+            print("No grayscale image available")
+            return jsonify({'message': 'No grayscale image available'}), 500
+    except Exception as e:
+        print(f"Exception in /update_threshold: {e}")
+        return jsonify({'message': 'An error occurred during image processing', 'error': str(e)}), 500
 
 @app.route('/capture_image', methods=['POST'])
 def capture_image():
-    global x1, y1, x2, y2
-    success, frame = camera.read()
-    if success:
-        try:
-            # Логирование для отладки
+    global x1, y1, x2, y2, threshold_value, last_gray_image
+    try:
+        success, frame = camera.read()
+        if success:
             print(f"Read a frame from the camera: {frame.shape}")
             print(f"Cropping coordinates: x1={x1}, y1={y1}, x2={x2}, y2={y2}")
 
-            # Обрезка изображения по координатам квадрата
+            # Проверка координат обрезки
+            if x1 < 0 or y1 < 0 or x2 > frame.shape[1] or y2 > frame.shape[0]:
+                print("Cropping coordinates are out of bounds")
+                return jsonify({'message': 'Cropping coordinates are out of bounds'}), 500
+
             cropped_frame = frame[y1:y2, x1:x2]
             print("Cropped the frame successfully")
 
@@ -71,39 +101,50 @@ def capture_image():
                 print("Cropped frame is empty")
                 return jsonify({'message': 'Cropped frame is empty'}), 500
 
-            # Конвертация изображения в черно-белый формат
             gray_image = cv2.cvtColor(cropped_frame, cv2.COLOR_BGR2GRAY)
+            last_gray_image = gray_image  # Сохранение последнего черно-белого изображения
             print("Converted the frame to grayscale")
 
-            # Кодирование изображения в base64
-            _, buffer = cv2.imencode('.jpg', gray_image)
-            encoded_image = base64.b64encode(buffer).decode('utf-8')
-            image_data = f'data:image/jpeg;base64,{encoded_image}'
-            print("Encoded the image to base64")
+            # Применение порогового преобразования
+            _, threshold_image = cv2.threshold(gray_image, threshold_value, 255, cv2.THRESH_BINARY)
+            print(f"Applied threshold to grayscale image with value {threshold_value}")
 
-            return jsonify({'imageData': image_data})
+            # Кодирование порогового изображения в base64
+            _, buffer_thresh = cv2.imencode('.jpg', threshold_image)
+            encoded_thresh_image = base64.b64encode(buffer_thresh).decode('utf-8')
+            thresh_image_data = f'data:image/jpeg;base64,{encoded_thresh_image}'
+            print("Encoded the threshold image to base64")
 
-        except Exception as e:
-            print(f"Exception: {e}")
-            return jsonify({'message': 'An error occurred during image processing', 'error': str(e)}), 500
-    else:
-        print("Failed to read a frame from the camera")
-    return jsonify({'message': 'Failed to capture image'}), 500
+            # Кодирование черно-белого изображения в base64
+            _, buffer_gray = cv2.imencode('.jpg', gray_image)
+            encoded_gray_image = base64.b64encode(buffer_gray).decode('utf-8')
+            gray_image_data = f'data:image/jpeg;base64,{encoded_gray_image}'
+            print("Encoded the grayscale image to base64")
+
+            return jsonify({'imageData': thresh_image_data, 'grayImageData': gray_image_data})
+
+        else:
+            print("Failed to read a frame from the camera")
+            return jsonify({'message': 'Failed to capture image'}), 500
+    except Exception as e:
+        print(f"Exception in /capture_image: {e}")
+        return jsonify({'message': 'An error occurred during image processing', 'error': str(e)}), 500
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'excelFile' not in request.files:
-        return "No file part", 400
-    file = request.files['excelFile']
-    if file.filename == '':
-        return "No selected file", 400
-    if file:
-        # Чтение Excel файла
-        df = pd.read_excel(file)
-        # Преобразование всех значений в одномерный массив
-        data = df.values.flatten().tolist()
-        # Возвращаем данные в виде одномерного массива
-        return jsonify(data)
+    try:
+        if 'excelFile' not in request.files:
+            return "No file part", 400
+        file = request.files['excelFile']
+        if file.filename == '':
+            return "No selected file", 400
+        if file:
+            df = pd.read_excel(file)
+            data = df.values.flatten().tolist()
+            return jsonify(data)
+    except Exception as e:
+        print(f"Exception in /upload: {e}")
+        return jsonify({'message': 'An error occurred during file upload', 'error': str(e)}), 500
 
 @app.route('/process_frame', methods=['POST'])
 def process_frame():
@@ -112,22 +153,19 @@ def process_frame():
         image_data = data['image']
         image_data = base64.b64decode(image_data.split(',')[1])
 
-        # Преобразование изображения в формат, с которым может работать OpenCV
         nparr = np.frombuffer(image_data, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-        # Применение вашей логики обработки изображений
         img_bw_cv = convert_to_bw(img)
-        img_bw_threshold = apply_threshold(img_bw_cv, 128)
+        img_bw_threshold = apply_threshold(img_bw_cv, threshold_value)
 
-        # Конвертация обработанного изображения обратно в base64 для отправки на клиент
         _, buffer = cv2.imencode('.jpg', img_bw_threshold)
         encoded_image = base64.b64encode(buffer)
         encoded_image_str = 'data:image/jpeg;base64,' + encoded_image.decode('utf-8')
 
         return jsonify({'image': encoded_image_str})
     except Exception as e:
-        print(f"Exception in process_frame: {e}")
+        print(f"Exception in /process_frame: {e}")
         return jsonify({'message': 'Error processing frame', 'error': str(e)}), 500
 
 @app.route('/save_image', methods=['POST'])
@@ -138,28 +176,45 @@ def save_image():
         image_data = image_data.split(",")[1]
         image_bytes = base64.b64decode(image_data)
 
-        # Указываем путь к папке /tmp и имя файла
         image_path = '/tmp/captured_image.jpg'
 
-        # Сохраняем изображение
         with open(image_path, 'wb') as image_file:
             image_file.write(image_bytes)
 
         return 'Изображение сохранено', 200
     except Exception as e:
-        print(f"Exception while saving image: {e}")
+        print(f"Exception in /save_image: {e}")
         return 'Failed to save image', 500
 
-def ocr_recognition(image):
+@app.route('/recognize_text', methods=['POST'])
+def recognize_text():
+    global last_gray_image, threshold_value
     try:
-        temp_image_path = 'temp_image.jpg'
-        cv2.imwrite(temp_image_path, image)
-        result = reader.readtext(temp_image_path, detail=0)
-        os.remove(temp_image_path)
-        return " ".join(result)
+        if last_gray_image is not None:
+            _, threshold_image = cv2.threshold(last_gray_image, threshold_value, 255, cv2.THRESH_BINARY)
+
+            # Сохранение порогового изображения во временный файл
+            temp_image_path = 'temp_threshold_image.jpg'
+            cv2.imwrite(temp_image_path, threshold_image)
+
+            # Распознавание текста с помощью EasyOCR
+            result = reader.readtext(temp_image_path, detail=0)
+            recognized_text = " ".join(result)
+
+            # Вывод распознанного текста в терминал
+            print(f"Recognized Text: {recognized_text}")
+
+
+            # Удаление временного файла
+            os.remove(temp_image_path)
+
+            return jsonify({'recognizedText': recognized_text})
+        else:
+            print("No grayscale image available")
+            return jsonify({'message': 'No grayscale image available'}), 500
     except Exception as e:
-        print(f"Exception in OCR recognition: {e}")
-        return 'Failed to recognize text'
+        print(f"Exception in /recognize_text: {e}")
+        return jsonify({'message': 'An error occurred during text recognition', 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
